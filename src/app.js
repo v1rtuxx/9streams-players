@@ -1,5 +1,6 @@
 const express = require('express');
 const axios = require('axios');
+const tvShowsRouter = require('./tv_shows');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -22,6 +23,8 @@ const fetchDataWithRetry = async (url, attempts, delay) => {
     }
     return null;
 };
+
+app.use('/tv_shows', tvShowsRouter);
 
 app.get('/', (req, res) => {
     res.json({ message: 'Your API is ready!' });
