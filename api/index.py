@@ -1,9 +1,11 @@
-from flask import Flask, request, jsonify
+import json
 import requests
 import time
-import json
+import logging
+from flask import Flask, request, jsonify
 
 app = Flask(__name__)
+logging.basicConfig(level=logging.DEBUG)
 
 # Your TMDB API Key
 TMDB_API_KEY = "dbd7e727fd4517c492d285d21c3d7da0"
@@ -17,9 +19,16 @@ def fetch_data_with_retry(url, attempts, delay):
             response = requests.get(url)
             if response.status_code == 200:
                 return response.text
-        except requests.RequestException:
+        except requests.RequestException as e:
+            logging.error(f"Request failed: {e}")
             time.sleep(delay)
+    logging.error("All retry attempts failed.")
     return None
+
+@app.route('/', methods=['GET'])
+def base():
+    # Return a JSON response indicating the API is ready
+    return jsonify({"message": "Your API is ready!"})
 
 @app.route('/fetch_movie_data', methods=['GET'])
 def fetch_movie_data():
@@ -32,7 +41,12 @@ def fetch_movie_data():
     if not tmdb_response:
         return jsonify({"error": "Failed to fetch data from TMDB API"})
 
-    tmdb_data = json.loads(tmdb_response)
+    try:
+        tmdb_data = json.loads(tmdb_response)
+    except json.JSONDecodeError as e:
+        logging.error(f"JSON decode error: {e}")
+        return jsonify({"error": "Failed to decode TMDB response"})
+
     if 'status_code' in tmdb_data:
         return jsonify({"error": "Invalid TMDB ID or API Key"})
 
@@ -45,7 +59,12 @@ def fetch_movie_data():
     if not stream_response:
         return jsonify({"error": "Failed to fetch data from 9streams API"})
 
-    stream_data = json.loads(stream_response)
+    try:
+        stream_data = json.loads(stream_response)
+    except json.JSONDecodeError as e:
+        logging.error(f"JSON decode error: {e}")
+        return jsonify({"error": "Failed to decode 9streams response"})
+
     if 'results' not in stream_data:
         return jsonify({"error": "No results found from 9streams API"})
 
@@ -55,7 +74,6 @@ def fetch_movie_data():
 
     if correct_movie:
         movie_id = correct_movie['id']
-
         import re
         match = re.search(r'/watch-(.*?)-(\d+)$', movie_id)
         if match:
@@ -73,7 +91,12 @@ def fetch_movie_data():
         if not info_response:
             return jsonify({"error": "Failed to fetch data from the info API"})
 
-        info_data = json.loads(info_response)
+        try:
+            info_data = json.loads(info_response)
+        except json.JSONDecodeError as e:
+            logging.error(f"JSON decode error: {e}")
+            return jsonify({"error": "Failed to decode info API response"})
+
         if 'title' in info_data and 'cover' in info_data:
             watch_data = json.loads(watch_response)
             watch_data['info'] = {
@@ -86,6 +109,5 @@ def fetch_movie_data():
     else:
         return jsonify({"error": "No matching movie found"})
 
-# Required to keep the application running when deployed
 if __name__ == "__main__":
     app.run(debug=True)
