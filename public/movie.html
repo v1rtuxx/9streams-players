@@ -58,7 +58,7 @@
                 return;
             }
 
-            fetch(`https://9streams-players.vercel.app/fetch_movie_data?tmdb_id=${id}`)
+            fetch(`https://9streams-players.vercel.app/fetch_movie_data?tmdb_id={id}`)
                 .then(response => {
                     if (!response.ok) {
                         throw new Error(`HTTP error: ${response.status}`);
