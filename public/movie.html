@@ -43,6 +43,8 @@
     </style>
 </head>
 <body>
+    <div id="loading-message">Loading...</div>
+
     <script type="module">
         document.addEventListener('DOMContentLoaded', () => {
             const params = new URLSearchParams(window.location.search);
@@ -58,7 +60,10 @@
                 return;
             }
 
-            fetch(`https://9streams-players.vercel.app/fetch_movie_data?tmdb_id={id}`)
+            // Display loading message
+            document.getElementById('loading-message').style.display = 'block';
+
+            fetch(`https://sup-proxy.zephex0-f6c.workers.dev/api-content?url=https://multimovie.rf.gd/apis/flixhq/sources.php?tmdb_id=${id}&headers="https://multimovie.rf.gd"`)
                 .then(response => {
                     if (!response.ok) {
                         throw new Error(`HTTP error: ${response.status}`);
@@ -66,6 +71,9 @@
                     return response.json();
                 })
                 .then(data => {
+                    // Hide loading message
+                    document.getElementById('loading-message').style.display = 'none';
+
                     if (!data.info || !Array.isArray(data.sources) || data.sources.length === 0) {
                         throw new Error('No data found for the provided ID.');
                     }
@@ -110,6 +118,9 @@
                     document.body.appendChild(mediaPlayer);
                 })
                 .catch(error => {
+                    // Hide loading message
+                    document.getElementById('loading-message').style.display = 'none';
+
                     document.body.innerHTML = `
                         <div id="error-message">
                             <h1>Error</h1>
