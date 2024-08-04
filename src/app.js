@@ -1,6 +1,8 @@
 const express = require('express');
 const axios = require('axios');
 const tvShowsRouter = require('./tv_shows');
+const path = require('path');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -23,6 +25,9 @@ const fetchDataWithRetry = async (url, attempts, delay) => {
     }
     return null;
 };
+
+// Serve static files from the "public" directory
+app.use(express.static(path.join(__dirname, '../public')));
 
 app.use('/tv_shows', tvShowsRouter);
 
