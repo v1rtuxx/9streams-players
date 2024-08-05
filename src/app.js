@@ -11,6 +11,23 @@ const TMDB_API_KEY = 'dbd7e727fd4517c492d285d21c3d7da0';
 const RETRY_ATTEMPTS = 3;
 const RETRY_DELAY = 200; // Delay in milliseconds
 
+const allowCors = fn => async (req, res) => {
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  // Uncomment the following line to allow only specific origins
+  // res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+  );
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+  return await fn(req, res);
+};
+
 const fetchDataWithRetry = async (url, attempts, delay) => {
     for (let i = 0; i < attempts; i++) {
         try {
@@ -29,13 +46,13 @@ const fetchDataWithRetry = async (url, attempts, delay) => {
 // Serve static files from the "public" directory
 app.use(express.static(path.join(__dirname, '../public')));
 
-app.use('/tv_shows', tvShowsRouter);
+app.use('/tv_shows', allowCors(tvShowsRouter));
 
-app.get('/', (req, res) => {
+app.get('/', allowCors((req, res) => {
     res.json({ message: 'Your API is ready!' });
-});
+}));
 
-app.get('/fetch_movie_data', async (req, res) => {
+app.get('/fetch_movie_data', allowCors(async (req, res) => {
     const tmdbId = req.query.tmdb_id;
     if (!tmdbId) {
         return res.json({ error: 'tmdb_id parameter is missing' });
@@ -101,7 +118,7 @@ app.get('/fetch_movie_data', async (req, res) => {
     } else {
         return res.json({ error: 'No matching movie found' });
     }
-});
+}));
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
