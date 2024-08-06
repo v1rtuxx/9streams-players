@@ -36,7 +36,7 @@ const fetchDataWithRetry = async (url, attempts, delay) => {
                 return response.data;
             }
         } catch (error) {
-            console.error(Request failed: ${error.message});
+            console.error(`Request failed: ${error.message}`);
         }
         await new Promise(resolve => setTimeout(resolve, delay));
     }
@@ -58,7 +58,7 @@ app.get('/fetch_movie_data', allowCors(async (req, res) => {
         return res.json({ error: 'tmdb_id parameter is missing' });
     }
 
-    const tmdbUrl = https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${TMDB_API_KEY};
+    const tmdbUrl = `https://api.themoviedb.org/3/movie/${tmdbId}?api_key=${TMDB_API_KEY}`;
     const tmdbData = await fetchDataWithRetry(tmdbUrl, RETRY_ATTEMPTS, RETRY_DELAY);
     if (!tmdbData) {
         return res.json({ error: 'Failed to fetch data from TMDB API' });
@@ -72,7 +72,7 @@ app.get('/fetch_movie_data', allowCors(async (req, res) => {
     const releaseYear = tmdbData.release_date.split('-')[0];
 
     const encodedTitle = encodeURIComponent(movieTitle);
-    const streamUrl = https://9streams-consumet.vercel.app/movies/flixhq/${encodedTitle}?page=1;
+    const streamUrl = `https://9streams-consumet.vercel.app/movies/flixhq/${encodedTitle}?page=1`;
     const streamData = await fetchDataWithRetry(streamUrl, RETRY_ATTEMPTS, RETRY_DELAY);
     if (!streamData) {
         return res.json({ error: 'Failed to fetch data from 9streams API' });
@@ -91,13 +91,13 @@ app.get('/fetch_movie_data', allowCors(async (req, res) => {
         const episodeIdMatch = movieId.match(/\/watch-(.*?)-(\d+)$/);
         if (episodeIdMatch) {
             const episodeId = episodeIdMatch[2];
-            const watchUrl = https://9streams-consumet.vercel.app/movies/flixhq/watch?episodeId=${episodeId}&mediaId=${movieId}&server=upcloud;
+            const watchUrl = `https://9streams-consumet.vercel.app/movies/flixhq/watch?episodeId=${episodeId}&mediaId=${movieId}&server=upcloud`;
             const watchData = await fetchDataWithRetry(watchUrl, RETRY_ATTEMPTS, RETRY_DELAY);
             if (!watchData) {
                 return res.json({ error: 'Failed to fetch data from the watch API' });
             }
 
-            const infoUrl = https://9streams-consumet.vercel.app/movies/flixhq/info?id=${movieId};
+            const infoUrl = `https://9streams-consumet.vercel.app/movies/flixhq/info?id=${movieId}`;
             const infoData = await fetchDataWithRetry(infoUrl, RETRY_ATTEMPTS, RETRY_DELAY);
             if (!infoData) {
                 return res.json({ error: 'Failed to fetch data from the info API' });
@@ -121,5 +121,5 @@ app.get('/fetch_movie_data', allowCors(async (req, res) => {
 }));
 
 app.listen(PORT, () => {
-    console.log(Server is running on port ${PORT});
+    console.log(`Server is running on port ${PORT}`);
 });
