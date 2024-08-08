@@ -7,6 +7,25 @@ const TMDB_API_KEY = 'dbd7e727fd4517c492d285d21c3d7da0';
 const RETRY_ATTEMPTS = 3;
 const RETRY_DELAY = 200; // Delay in milliseconds
 
+// Allowed domains
+const ALLOWED_DOMAINS = ['9streams.xyz', 'flixcloud.co'];
+
+// Helper function to check if the request is from an allowed domain
+const isAllowedDomain = (req) => {
+    const referer = req.get('Referer');
+    const origin = req.get('Origin');
+    if (referer) {
+        const refererDomain = new URL(referer).hostname;
+        return ALLOWED_DOMAINS.includes(refererDomain);
+    }
+    if (origin) {
+        const originDomain = new URL(origin).hostname;
+        return ALLOWED_DOMAINS.includes(originDomain);
+    }
+    // If no referer or origin, deny access
+    return false;
+};
+
 // Helper function to fetch data with retry logic and timeout
 const fetchDataWithRetry = async (url, attempts, delay) => {
     for (let i = 0; i < attempts; i++) {
@@ -26,6 +45,11 @@ const fetchDataWithRetry = async (url, attempts, delay) => {
 };
 
 router.get('/fetch_tv_show_data', async (req, res) => {
+    // Check if the request is from an allowed domain
+    if (!isAllowedDomain(req)) {
+        return res.status(403).json({ error: 'Forbidden: Access is denied.' });
+    }
+
     const tmdbId = req.query.tmdb_id;
     const seasonNumber = req.query.s;
     const episodeNumber = req.query.e;
