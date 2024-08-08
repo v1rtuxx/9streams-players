@@ -11,16 +11,12 @@ const TMDB_API_KEY = 'dbd7e727fd4517c492d285d21c3d7da0';
 const RETRY_ATTEMPTS = 3;
 const RETRY_DELAY = 200; // Delay in milliseconds
 
+// Middleware to handle CORS
 const allowCors = fn => async (req, res) => {
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
-  // Uncomment the following line to allow only specific origins
-  // res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader(
-    'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-  );
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
@@ -28,17 +24,20 @@ const allowCors = fn => async (req, res) => {
   return await fn(req, res);
 };
 
+// Fetch data with retry logic
 const fetchDataWithRetry = async (url, attempts, delay) => {
     for (let i = 0; i < attempts; i++) {
         try {
-            const response = await axios.get(url);
+            const response = await axios.get(url, { timeout: 5000 }); // Set timeout for requests
             if (response.status === 200) {
                 return response.data;
             }
         } catch (error) {
             console.error(`Request failed: ${error.message}`);
+            if (i < attempts - 1) {
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
         }
-        await new Promise(resolve => setTimeout(resolve, delay));
     }
     return null;
 };
@@ -46,12 +45,15 @@ const fetchDataWithRetry = async (url, attempts, delay) => {
 // Serve static files from the "public" directory
 app.use(express.static(path.join(__dirname, '../public')));
 
+// Use the TV shows router
 app.use('/tv_shows', allowCors(tvShowsRouter));
 
+// Root route
 app.get('/', allowCors((req, res) => {
     res.json({ message: 'Your API is ready!' });
 }));
 
+// Endpoint to fetch movie data
 app.get('/fetch_movie_data', allowCors(async (req, res) => {
     const tmdbId = req.query.tmdb_id;
     if (!tmdbId) {
@@ -70,7 +72,6 @@ app.get('/fetch_movie_data', allowCors(async (req, res) => {
 
     const movieTitle = tmdbData.title;
     const releaseYear = tmdbData.release_date.split('-')[0];
-
     const encodedTitle = encodeURIComponent(movieTitle);
     const streamUrl = `https://9streams-consumet.vercel.app/movies/flixhq/${encodedTitle}?page=1`;
     const streamData = await fetchDataWithRetry(streamUrl, RETRY_ATTEMPTS, RETRY_DELAY);
@@ -120,6 +121,7 @@ app.get('/fetch_movie_data', allowCors(async (req, res) => {
     }
 }));
 
+// Start the server
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
