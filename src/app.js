@@ -121,6 +121,19 @@ app.get('/fetch_movie_data', allowCors(async (req, res) => {
     }
 }));
 
+// Endpoint to fetch data from TMDB based on path
+app.get('/tmdb/*', allowCors(async (req, res) => {
+    const path = req.params[0]; // Extract the path after '/tmdb/'
+    const tmdbUrl = `https://api.themoviedb.org/3/${path}?api_key=${TMDB_API_KEY}`;
+
+    const tmdbData = await fetchDataWithRetry(tmdbUrl, RETRY_ATTEMPTS, RETRY_DELAY);
+    if (!tmdbData) {
+        return res.status(500).json({ error: 'Failed to fetch data from TMDB API' });
+    }
+
+    return res.json(tmdbData);
+}));
+
 // Start the server
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
