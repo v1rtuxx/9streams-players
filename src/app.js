@@ -11,47 +11,15 @@ const TMDB_API_KEY = 'dbd7e727fd4517c492d285d21c3d7da0';
 const RETRY_ATTEMPTS = 3;
 const RETRY_DELAY = 200; // Delay in milliseconds
 
-// Allowed domains
-const ALLOWED_DOMAINS = ['9streams.xyz', 'flixcloud.co'];
-
-// Helper function to check if the request is from an allowed domain
-const isAllowedDomain = (req) => {
-    const referer = req.get('Referer');
-    const origin = req.get('Origin');
-    if (referer) {
-        try {
-            const refererDomain = new URL(referer).hostname;
-            return ALLOWED_DOMAINS.includes(refererDomain);
-        } catch (e) {
-            console.error(`Invalid referer URL: ${referer}`);
-            return false;
-        }
-    }
-    if (origin) {
-        try {
-            const originDomain = new URL(origin).hostname;
-            return ALLOWED_DOMAINS.includes(originDomain);
-        } catch (e) {
-            console.error(`Invalid origin URL: ${origin}`);
-            return false;
-        }
-    }
-    // If no referer or origin, deny access
-    return false;
-};
-
 // Middleware to handle CORS
 const allowCors = fn => async (req, res) => {
     res.setHeader('Access-Control-Allow-Credentials', true);
-    res.setHeader('Access-Control-Allow-Origin', '*'); // Replace '*' with specific allowed origins if needed
+    res.setHeader('Access-Control-Allow-Origin', '*'); // Allow all origins
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
     res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
     if (req.method === 'OPTIONS') {
         res.status(200).end();
         return;
-    }
-    if (!isAllowedDomain(req)) {
-        return res.status(403).json({ error: 'Forbidden: Access is denied.' });
     }
     return await fn(req, res);
 };
