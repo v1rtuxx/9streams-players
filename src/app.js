@@ -11,6 +11,9 @@ const TMDB_API_KEY = 'dbd7e727fd4517c492d285d21c3d7da0';
 const RETRY_ATTEMPTS = 3;
 const RETRY_DELAY = 200; // Delay in milliseconds
 
+// Allowed referrers
+const ALLOWED_REFERRERS = ['https://9streams.xyz', 'https://flixcloud.co'];
+
 // Middleware to handle CORS
 const allowCors = fn => async (req, res) => {
     res.setHeader('Access-Control-Allow-Credentials', true);
@@ -42,6 +45,15 @@ const fetchDataWithRetry = async (url, attempts, delay) => {
     return null;
 };
 
+// Middleware to check referrer
+const checkReferrer = (req, res, next) => {
+    const referer = req.get('Referer');
+    if (!referer || !ALLOWED_REFERRERS.some(allowed => referer.startsWith(allowed))) {
+        return res.status(403).json({ error: 'Forbidden: Access is denied.' });
+    }
+    next();
+};
+
 // Serve static files from the "public" directory
 app.use(express.static(path.join(__dirname, '../public')));
 
@@ -54,7 +66,7 @@ app.get('/', allowCors((req, res) => {
 }));
 
 // Endpoint to fetch movie data
-app.get('/fetch_movie_data', allowCors(async (req, res) => {
+app.get('/fetch_movie_data', allowCors(checkReferrer, async (req, res) => {
     const tmdbId = req.query.tmdb_id;
     if (!tmdbId) {
         return res.status(400).json({ error: 'tmdb_id parameter is missing' });
