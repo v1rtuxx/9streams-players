@@ -67,10 +67,10 @@ app.get('/', allowCors((req, res) => {
 // Endpoint to fetch movie data
 app.get('/fetch_movie_data', allowCors(async (req, res) => {
     // Check referrer
-    const referrer = req.get('Referrer') || req.get('Referer');
-    const allowedReferrers = ['https://9streams.xyz', 'https://flixcloud.co'];
+    const referrer = req.get('Referer') || req.get('Referrer'); // Correct header names
 
-    if (!allowedReferrers.includes(referrer)) {
+    // Referrer validation
+    if (!ALLOWED_ORIGINS.some(origin => referrer && referrer.startsWith(origin))) {
         return res.status(403).json({ error: 'Forbidden: Access is denied.' });
     }
 
