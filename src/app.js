@@ -11,15 +11,23 @@ const TMDB_API_KEY = 'dbd7e727fd4517c492d285d21c3d7da0';
 const RETRY_ATTEMPTS = 3;
 const RETRY_DELAY = 200; // Delay in milliseconds
 
-// Allowed referrers
-const ALLOWED_REFERRERS = ['https://9streams.xyz', 'https://flixcloud.co'];
+// Allowed origins for CORS
+const ALLOWED_ORIGINS = ['https://9streams.xyz', 'https://flixcloud.co'];
 
 // Middleware to handle CORS
 const allowCors = fn => async (req, res) => {
-    res.setHeader('Access-Control-Allow-Credentials', true);
-    res.setHeader('Access-Control-Allow-Origin', '*'); // Allow all origins
+    const origin = req.get('Origin');
+    
+    if (ALLOWED_ORIGINS.includes(origin)) {
+        res.setHeader('Access-Control-Allow-Credentials', true);
+        res.setHeader('Access-Control-Allow-Origin', origin); // Allow specific origins
+    } else {
+        res.setHeader('Access-Control-Allow-Origin', ''); // Disallow all others
+    }
+
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
     res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+
     if (req.method === 'OPTIONS') {
         res.status(200).end();
         return;
@@ -45,15 +53,6 @@ const fetchDataWithRetry = async (url, attempts, delay) => {
     return null;
 };
 
-// Middleware to check referrer
-const checkReferrer = (req, res, next) => {
-    const referer = req.get('Referer');
-    if (!referer || !ALLOWED_REFERRERS.some(allowed => referer.startsWith(allowed))) {
-        return res.status(403).json({ error: 'Forbidden: Access is denied.' });
-    }
-    next();
-};
-
 // Serve static files from the "public" directory
 app.use(express.static(path.join(__dirname, '../public')));
 
@@ -66,7 +65,15 @@ app.get('/', allowCors((req, res) => {
 }));
 
 // Endpoint to fetch movie data
-app.get('/fetch_movie_data', allowCors(checkReferrer, async (req, res) => {
+app.get('/fetch_movie_data', allowCors(async (req, res) => {
+    // Check referrer
+    const referrer = req.get('Referrer') || req.get('Referer');
+    const allowedReferrers = ['https://9streams.xyz', 'https://flixcloud.co'];
+
+    if (!allowedReferrers.includes(referrer)) {
+        return res.status(403).json({ error: 'Forbidden: Access is denied.' });
+    }
+
     const tmdbId = req.query.tmdb_id;
     if (!tmdbId) {
         return res.status(400).json({ error: 'tmdb_id parameter is missing' });
