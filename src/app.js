@@ -11,20 +11,33 @@ const TMDB_API_KEY = 'dbd7e727fd4517c492d285d21c3d7da0';
 const RETRY_ATTEMPTS = 3;
 const RETRY_DELAY = 200; // Delay in milliseconds
 
-// Allowed origins for CORS
-const ALLOWED_ORIGINS = ['https://9streams.xyz', 'https://flixcloud.co'];
+// Allowed domains for CORS
+const ALLOWED_DOMAINS = ['9streams.xyz', 'flixcloud.co'];
 
-// Middleware to handle CORS
-const allowCors = fn => async (req, res) => {
+// Helper function to check if the request is from an allowed domain
+const isAllowedDomain = (req) => {
+    const referer = req.get('Referer');
     const origin = req.get('Origin');
-    
-    if (ALLOWED_ORIGINS.includes(origin)) {
-        res.setHeader('Access-Control-Allow-Credentials', true);
-        res.setHeader('Access-Control-Allow-Origin', origin); // Allow specific origins
-    } else {
-        res.setHeader('Access-Control-Allow-Origin', ''); // Disallow all others
+    if (referer) {
+        const refererDomain = new URL(referer).hostname;
+        return ALLOWED_DOMAINS.includes(refererDomain);
+    }
+    if (origin) {
+        const originDomain = new URL(origin).hostname;
+        return ALLOWED_DOMAINS.includes(originDomain);
+    }
+    // If no referer or origin, deny access
+    return false;
+};
+
+// Middleware to handle CORS and domain validation
+const allowCors = fn => async (req, res) => {
+    if (!isAllowedDomain(req)) {
+        return res.status(403).json({ error: 'Forbidden: Access is denied.' });
     }
 
+    res.setHeader('Access-Control-Allow-Credentials', true);
+    res.setHeader('Access-Control-Allow-Origin', req.get('Origin') || '*'); // Allow specific origins
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
     res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
@@ -66,14 +79,6 @@ app.get('/', allowCors((req, res) => {
 
 // Endpoint to fetch movie data
 app.get('/fetch_movie_data', allowCors(async (req, res) => {
-    // Check referrer
-    const referrer = req.get('Referer') || req.get('Referrer'); // Correct header names
-
-    // Referrer validation
-    if (!ALLOWED_ORIGINS.some(origin => referrer && referrer.startsWith(origin))) {
-        return res.status(403).json({ error: 'Forbidden: Access is denied.' });
-    }
-
     const tmdbId = req.query.tmdb_id;
     if (!tmdbId) {
         return res.status(400).json({ error: 'tmdb_id parameter is missing' });
