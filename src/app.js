@@ -77,6 +77,44 @@ app.get('/', allowCors((req, res) => {
     res.json({ message: 'Your API is ready!' });
 }));
 
+// New endpoint to get skiptimes in VTT format
+app.get('/skiptimes/:episodeId.vtt', allowCors(async (req, res) => {
+    const { episodeId } = req.params;
+    const apiUrl = `https://9streams-consumet.vercel.app/anime/zoro/watch?episodeId=${episodeId}&server=vidcloud`;
+
+    // Fetch data from the API
+    const apiData = await fetchDataWithRetry(apiUrl, RETRY_ATTEMPTS, RETRY_DELAY);
+    if (!apiData) {
+        return res.status(500).json({ error: 'Failed to fetch data from 9streams API' });
+    }
+
+    // Extract intro and outro times
+    const { intro, outro } = apiData;
+    if (!intro || !outro) {
+        return res.status(404).json({ error: 'Intro or Outro times not found' });
+    }
+
+    // Convert intro and outro times to VTT format
+    const formatTime = (seconds) => {
+        const minutes = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    };
+
+    const vttContent = `WEBVTT
+
+${formatTime(intro.start)} --> ${formatTime(intro.end)}
+Opening
+
+${formatTime(outro.start)} --> ${formatTime(outro.end)}
+Outro
+`;
+
+    // Set the response headers for VTT file
+    res.setHeader('Content-Type', 'text/vtt');
+    res.send(vttContent);
+}));
+
 // Endpoint to fetch movie data
 app.get('/fetch_movie_data', allowCors(async (req, res) => {
     const tmdbId = req.query.tmdb_id;
