@@ -11,19 +11,56 @@ const TMDB_API_KEY = 'dbd7e727fd4517c492d285d21c3d7da0';
 const RETRY_ATTEMPTS = 3;
 const RETRY_DELAY = 200; // Delay in milliseconds
 
-// Middleware to handle CORS
-const allowCors = fn => async (req, res) => {
-    // Allow CORS for all origins
-    res.setHeader('Access-Control-Allow-Credentials', true);
-    res.setHeader('Access-Control-Allow-Origin', '*'); // Allow all origins
-    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-    res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+// Allowed domains for CORS
+const ALLOWED_DOMAINS = ['9streams.xyz', 'flixcloud.co'];
 
-    if (req.method === 'OPTIONS') {
-        res.status(200).end();
-        return;
+// Helper function to check if the request is from an allowed domain
+const isAllowedDomain = (req) => {
+    const referer = req.get('Referer');
+    const origin = req.get('Origin');
+    if (referer) {
+        const refererDomain = new URL(referer).hostname;
+        return ALLOWED_DOMAINS.includes(refererDomain);
     }
-    return await fn(req, res);
+    if (origin) {
+        const originDomain = new URL(origin).hostname;
+        return ALLOWED_DOMAINS.includes(originDomain);
+    }
+    // If no referer or origin, deny access
+    return false;
+};
+
+// Middleware to handle CORS for specific endpoints
+const allowCors = (fn) => async (req, res) => {
+    if (req.path.startsWith('/skiptimes')) {
+        // Allow CORS for the /skiptimes endpoint
+        res.setHeader('Access-Control-Allow-Credentials', true);
+        res.setHeader('Access-Control-Allow-Origin', '*'); // Allow all origins
+        res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+
+        if (req.method === 'OPTIONS') {
+            res.status(200).end();
+            return;
+        }
+        return await fn(req, res);
+    } else {
+        // Restrict CORS for other endpoints
+        if (!isAllowedDomain(req)) {
+            return res.status(403).json({ error: 'Forbidden: Access is denied.' });
+        }
+
+        res.setHeader('Access-Control-Allow-Credentials', true);
+        res.setHeader('Access-Control-Allow-Origin', req.get('Origin') || '*'); // Allow specific origins
+        res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+        res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+
+        if (req.method === 'OPTIONS') {
+            res.status(200).end();
+            return;
+        }
+        return await fn(req, res);
+    }
 };
 
 // Fetch data with retry logic
